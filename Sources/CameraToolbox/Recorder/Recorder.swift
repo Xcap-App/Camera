@@ -45,7 +45,7 @@ extension Recorder {
         case cancelling
     }
     
-    public enum FileType {
+    public enum FileType: Int, CaseIterable {
         case mov
         case mp4
         

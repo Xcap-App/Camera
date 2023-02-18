@@ -101,26 +101,6 @@ extension Recorder {
     
 }
 
-extension Recorder {
-    
-    public static func pixelBuffer(
-        from sampleBuffer: CMSampleBuffer,
-        flipOptions: FlipOptions = [],
-        drawingHandler: @escaping (CGRect) -> Void
-    ) -> CVPixelBuffer? {
-        sampleBuffer.pixelBuffer(flipOptions: flipOptions, drawingHandler: drawingHandler)
-    }
-    
-    public static func pixelBuffer(from sampleBuffer: CMSampleBuffer) -> CVPixelBuffer? {
-        CMSampleBufferGetImageBuffer(sampleBuffer)
-    }
-    
-    public static func timeStamp(in sampleBuffer: CMSampleBuffer) -> CMTime {
-        CMSampleBufferGetPresentationTimeStamp(sampleBuffer)
-    }
-    
-}
-
 public class Recorder {
     
     // MAKR: - Private
@@ -256,10 +236,35 @@ public class Recorder {
     // MARK: - Video
     
     @discardableResult
-    public func appendVideoData(_ sampleBuffer: CMSampleBuffer, drawingHandler: ((CGRect) -> Void)? = nil) -> Bool {
-        guard let writer = videoWriter,
-              isRecording,
-              let pixelBuffer = sampleBuffer.pixelBuffer(flipOptions: writer.flipOptions, drawingHandler: drawingHandler)
+    public func appendVideoData(_ pixelBuffer: CVPixelBuffer, timeStamp: CMTime) -> Bool {
+        guard let writer = videoWriter, isRecording else {
+            return false
+        }
+        
+        setStartTimeIfNeeded(timeStamp)
+        
+        return writer.appendVideoData(pixelBuffer, timeStamp: timeStamp)
+    }
+    
+    @discardableResult
+    public func appendVideoData(_ pixelBuffer: CVPixelBuffer, timeStamp: CMTime, drawingHandler: @escaping (CGRect) -> Void) -> Bool {
+        guard isRecording,
+              let writer = videoWriter,
+              let copiedPixelBuffer = pixelBuffer.copy(flipOptions: writer.flipOptions, drawingHandler: drawingHandler)
+        else {
+            return false
+        }
+        
+        setStartTimeIfNeeded(timeStamp)
+        
+        return writer.appendVideoData(copiedPixelBuffer, timeStamp: timeStamp)
+    }
+    
+    @discardableResult
+    public func appendVideoData(_ sampleBuffer: CMSampleBuffer) -> Bool {
+        guard isRecording,
+              let writer = videoWriter,
+              let pixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer)
         else {
             return false
         }
@@ -272,14 +277,20 @@ public class Recorder {
     }
     
     @discardableResult
-    public func appendVideoData(_ pixelBuffer: CVPixelBuffer, timeStamp: CMTime) -> Bool {
-        guard let writer = videoWriter, isRecording else {
+    public func appendVideoData(_ sampleBuffer: CMSampleBuffer, drawingHandler: @escaping (CGRect) -> Void) -> Bool {
+        guard isRecording,
+              let writer = videoWriter,
+              let sourcePixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer),
+              let copiedPixelBuffer = sourcePixelBuffer.copy(flipOptions: writer.flipOptions, drawingHandler: drawingHandler)
+        else {
             return false
         }
         
+        let timeStamp = CMSampleBufferGetPresentationTimeStamp(sampleBuffer)
+
         setStartTimeIfNeeded(timeStamp)
-        
-        return writer.appendVideoData(pixelBuffer, timeStamp: timeStamp)
+
+        return writer.appendVideoData(copiedPixelBuffer, timeStamp: timeStamp)
     }
     
     @discardableResult

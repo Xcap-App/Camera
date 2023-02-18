@@ -247,7 +247,7 @@ public class Recorder {
     }
     
     @discardableResult
-    public func appendVideoData(_ pixelBuffer: CVPixelBuffer, timeStamp: CMTime, drawingHandler: @escaping (CGRect) -> Void) -> Bool {
+    public func appendVideoData(_ pixelBuffer: CVPixelBuffer, timeStamp: CMTime, drawingHandler: (CGRect) -> Void) -> Bool {
         guard isRecording,
               let writer = videoWriter,
               let copiedPixelBuffer = pixelBuffer.copy()
@@ -279,7 +279,7 @@ public class Recorder {
     }
     
     @discardableResult
-    public func appendVideoData(_ sampleBuffer: CMSampleBuffer, drawingHandler: @escaping (CGRect) -> Void) -> Bool {
+    public func appendVideoData(_ sampleBuffer: CMSampleBuffer, drawingHandler: (CGRect) -> Void) -> Bool {
         guard isRecording,
               let writer = videoWriter,
               let sourcePixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer),
